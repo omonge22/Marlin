@@ -34,7 +34,7 @@
 #endif
 
 #ifndef DEFAULT_SOURCE_CODE_URL
-  #define DEFAULT_SOURCE_CODE_URL "3dprint.elettronicain.it"
+  #define DEFAULT_SOURCE_CODE_URL "https://3dprint.elettronicain.it/"
 #endif
 
 //
@@ -43,11 +43,6 @@
 #define RAMPS_D8_PIN                           9
 #define RAMPS_D9_PIN                           8
 #define MOSFET_D_PIN                          12
-
-//
-// Misc. Functions
-//
-#define SDSS                                  25
 
 #ifndef CASE_LIGHT_PIN
   #define CASE_LIGHT_PIN                      -1  // Hardware PWM but one is not available on expansion header
@@ -71,13 +66,19 @@
 //
 #define HEATER_2_PIN                           6
 
+//
+// Misc. Functions
+//
+#undef SDSS
+#define SDSS                                  25
+
 #undef SD_DETECT_PIN
 #define SD_DETECT_PIN                         53
 
 //
 // LCD / Controller
 //
-#if IS_ULTRA_LCD && IS_NEWPANEL
+#if BOTH(ULTRA_LCD, NEWPANEL)
   #undef BEEPER_PIN
 
   #undef LCD_PINS_RS
@@ -105,7 +106,7 @@
 
   #define BEEPER_PIN                          33
 
-#endif // IS_ULTRA_LCD && IS_NEWPANEL
+#endif // ULTRA_LCD && NEWPANEL
 
 /**
  *  M3/M4/M5 - Spindle/Laser Control
@@ -143,7 +144,7 @@
 #undef SPINDLE_DIR_PIN
 
 #if HAS_CUTTER
-  #if !HAS_EXTRUDERS
+  #if !EXTRUDERS
     #undef E0_DIR_PIN
     #undef E0_ENABLE_PIN
     #undef E0_STEP_PIN
@@ -156,7 +157,7 @@
     #define SPINDLE_LASER_PWM_PIN             46  // Hardware PWM
     #define SPINDLE_LASER_ENA_PIN             62  // Pullup!
     #define SPINDLE_DIR_PIN                   48
-  #elif !BOTH(IS_ULTRA_LCD, IS_NEWPANEL)          // Use expansion header if no LCD in use
+  #elif !BOTH(ULTRA_LCD, NEWPANEL)                // use expansion header if no LCD in use
     #define SPINDLE_LASER_ENA_PIN             16  // Pullup or pulldown!
     #define SPINDLE_DIR_PIN                   17
   #endif

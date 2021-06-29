@@ -25,7 +25,9 @@
  * DUE3DOM pin assignments
  */
 
-#include "env_validate.h"
+#if NOT_TARGET(__SAM3X8E__)
+  #error "Oops! Select 'Arduino Due' in 'Tools > Board.'"
+#endif
 
 #define BOARD_INFO_NAME "DUE3DOM"
 
@@ -120,7 +122,7 @@
   #define LCD_PINS_D6                         46
   #define LCD_PINS_D7                         47
 
-  #if IS_RRD_SC
+  #if ENABLED(REPRAP_DISCOUNT_SMART_CONTROLLER)
 
     #define BEEPER_PIN                        41
 
@@ -128,6 +130,7 @@
     #define BTN_EN2                           52
     #define BTN_ENC                           48
 
+    #define SDSS                               4
     #define SD_DETECT_PIN                     14
 
   #elif ENABLED(RADDS_DISPLAY)
@@ -140,6 +143,8 @@
 
     #define BTN_BACK                          71
 
+    #undef SDSS
+    #define SDSS                               4
     #define SD_DETECT_PIN                     14
 
   #elif HAS_U8GLIB_I2C_OLED
@@ -163,9 +168,4 @@
 
     #define BEEPER_PIN                        -1
   #endif // SPARK_FULL_GRAPHICS
-
-  #if ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER)
-    #define BTN_ENC_EN               LCD_PINS_D7  // Detect the presence of the encoder
-  #endif
-
 #endif // HAS_WIRED_LCD
