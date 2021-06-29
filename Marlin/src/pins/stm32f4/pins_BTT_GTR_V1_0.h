@@ -23,10 +23,10 @@
 
 #include "env_validate.h"
 
-#if E_STEPPERS > MAX_E_STEPPERS
-  #error "Marlin extruder/hotends limit! Increase MAX_E_STEPPERS to continue."
-#elif HOTENDS > 8 || E_STEPPERS > 8
+#if HOTENDS > 8 || E_STEPPERS > 8
   #error "BIGTREE GTR V1.0 supports up to 8 hotends / E-steppers."
+#elif HOTENDS > MAX_E_STEPPERS || E_STEPPERS > MAX_E_STEPPERS
+  #error "Marlin extruder/hotends limit! Increase MAX_E_STEPPERS to continue."
 #endif
 
 #define BOARD_INFO_NAME "BTT GTR V1.0"
@@ -357,6 +357,8 @@
 
 #elif SD_CONNECTION_IS(ONBOARD)
 
+  // Instruct the STM32 HAL to override the default SPI pins from the variant.h file
+  #define CUSTOM_SPI_PINS
   #define SDSS                              PA4
   #define SD_SS_PIN                         SDSS
   #define SD_SCK_PIN                        PA5
@@ -411,7 +413,6 @@
   #define TOUCH_MOSI_PIN             EXP1_08_PIN
   #define TOUCH_SCK_PIN              EXP1_06_PIN
   #define TOUCH_CS_PIN               EXP1_07_PIN
-  #define BTN_ENC                    EXP1_09_PIN
   #define BTN_EN1                    EXP2_08_PIN
   #define BTN_EN2                    EXP2_06_PIN
 

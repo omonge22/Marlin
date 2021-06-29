@@ -168,14 +168,10 @@
   void M554_report();
 #endif
 
-#define _EN_ITEM(N) , E##N
-
-typedef struct { uint16_t LINEAR_AXIS_LIST(X, Y, Z, I, J, K), X2, Y2, Z2, Z3, Z4 REPEAT(E_STEPPERS, _EN_ITEM); } tmc_stepper_current_t;
-typedef struct { uint32_t LINEAR_AXIS_LIST(X, Y, Z, I, J, K), X2, Y2, Z2, Z3, Z4 REPEAT(E_STEPPERS, _EN_ITEM); } tmc_hybrid_threshold_t;
-typedef struct {  int16_t LINEAR_AXIS_LIST(X, Y, Z, I, J, K), X2, Y2, Z2, Z3, Z4;                              } tmc_sgt_t;
-typedef struct {     bool LINEAR_AXIS_LIST(X, Y, Z, I, J, K), X2, Y2, Z2, Z3, Z4 REPEAT(E_STEPPERS, _EN_ITEM); } tmc_stealth_enabled_t;
-
-#undef _EN_ITEM
+typedef struct { uint16_t X, Y, Z, X2, Y2, Z2, Z3, Z4, E0, E1, E2, E3, E4, E5, E6, E7; } tmc_stepper_current_t;
+typedef struct { uint32_t X, Y, Z, X2, Y2, Z2, Z3, Z4, E0, E1, E2, E3, E4, E5, E6, E7; } tmc_hybrid_threshold_t;
+typedef struct {  int16_t X, Y, Z, X2, Y2, Z2, Z3, Z4;                                 } tmc_sgt_t;
+typedef struct {     bool X, Y, Z, X2, Y2, Z2, Z3, Z4, E0, E1, E2, E3, E4, E5, E6, E7; } tmc_stealth_enabled_t;
 
 // Limit an index to an array size
 #define ALIM(I,ARR) _MIN(I, (signed)COUNT(ARR) - 1)
@@ -391,7 +387,7 @@ typedef struct SettingsDataStruct {
   #ifndef MOTOR_CURRENT_COUNT
     #define MOTOR_CURRENT_COUNT LINEAR_AXES
   #endif
-  uint32_t motor_current_setting[MOTOR_CURRENT_COUNT];  // M907 X Z E ...
+  uint32_t motor_current_setting[MOTOR_CURRENT_COUNT];  // M907 X Z E
 
   //
   // CNC_COORDINATE_SYSTEMS
@@ -658,7 +654,7 @@ void MarlinSettings::postprocess() {
           EEPROM_WRITE(dummyf);
         #endif
       #else
-        const xyze_pos_t planner_max_jerk = LOGICAL_AXIS_ARRAY(float(DEFAULT_EJERK), 10, 10, 0.4, 0.4, 0.4, 0.4);
+        const xyze_pos_t planner_max_jerk = { 10, 10, 0.4, float(DEFAULT_EJERK) };
         EEPROM_WRITE(planner_max_jerk);
       #endif
 
@@ -1091,15 +1087,6 @@ void MarlinSettings::postprocess() {
         #if AXIS_IS_TMC(Z)
           tmc_stepper_current.Z = stepperZ.getMilliamps();
         #endif
-        #if AXIS_IS_TMC(I)
-          tmc_stepper_current.I = stepperI.getMilliamps();
-        #endif
-        #if AXIS_IS_TMC(J)
-          tmc_stepper_current.J = stepperJ.getMilliamps();
-        #endif
-        #if AXIS_IS_TMC(K)
-          tmc_stepper_current.K = stepperK.getMilliamps();
-        #endif
         #if AXIS_IS_TMC(X2)
           tmc_stepper_current.X2 = stepperX2.getMilliamps();
         #endif
@@ -1151,33 +1138,61 @@ void MarlinSettings::postprocess() {
 
       #if ENABLED(HYBRID_THRESHOLD)
         tmc_hybrid_threshold_t tmc_hybrid_threshold{0};
-        TERN_(X_HAS_STEALTHCHOP,  tmc_hybrid_threshold.X =  stepperX.get_pwm_thrs());
-        TERN_(Y_HAS_STEALTHCHOP,  tmc_hybrid_threshold.Y =  stepperY.get_pwm_thrs());
-        TERN_(Z_HAS_STEALTHCHOP,  tmc_hybrid_threshold.Z =  stepperZ.get_pwm_thrs());
-        TERN_(I_HAS_STEALTHCHOP,  tmc_hybrid_threshold.I =  stepperI.get_pwm_thrs());
-        TERN_(J_HAS_STEALTHCHOP,  tmc_hybrid_threshold.J =  stepperJ.get_pwm_thrs());
-        TERN_(K_HAS_STEALTHCHOP,  tmc_hybrid_threshold.K =  stepperK.get_pwm_thrs());
-        TERN_(X2_HAS_STEALTHCHOP, tmc_hybrid_threshold.X2 = stepperX2.get_pwm_thrs());
-        TERN_(Y2_HAS_STEALTHCHOP, tmc_hybrid_threshold.Y2 = stepperY2.get_pwm_thrs());
-        TERN_(Z2_HAS_STEALTHCHOP, tmc_hybrid_threshold.Z2 = stepperZ2.get_pwm_thrs());
-        TERN_(Z3_HAS_STEALTHCHOP, tmc_hybrid_threshold.Z3 = stepperZ3.get_pwm_thrs());
-        TERN_(Z4_HAS_STEALTHCHOP, tmc_hybrid_threshold.Z4 = stepperZ4.get_pwm_thrs());
-        TERN_(E0_HAS_STEALTHCHOP, tmc_hybrid_threshold.E0 = stepperE0.get_pwm_thrs());
-        TERN_(E1_HAS_STEALTHCHOP, tmc_hybrid_threshold.E1 = stepperE1.get_pwm_thrs());
-        TERN_(E2_HAS_STEALTHCHOP, tmc_hybrid_threshold.E2 = stepperE2.get_pwm_thrs());
-        TERN_(E3_HAS_STEALTHCHOP, tmc_hybrid_threshold.E3 = stepperE3.get_pwm_thrs());
-        TERN_(E4_HAS_STEALTHCHOP, tmc_hybrid_threshold.E4 = stepperE4.get_pwm_thrs());
-        TERN_(E5_HAS_STEALTHCHOP, tmc_hybrid_threshold.E5 = stepperE5.get_pwm_thrs());
-        TERN_(E6_HAS_STEALTHCHOP, tmc_hybrid_threshold.E6 = stepperE6.get_pwm_thrs());
-        TERN_(E7_HAS_STEALTHCHOP, tmc_hybrid_threshold.E7 = stepperE7.get_pwm_thrs());
+        #if AXIS_HAS_STEALTHCHOP(X)
+          tmc_hybrid_threshold.X = stepperX.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Y)
+          tmc_hybrid_threshold.Y = stepperY.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z)
+          tmc_hybrid_threshold.Z = stepperZ.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(X2)
+          tmc_hybrid_threshold.X2 = stepperX2.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Y2)
+          tmc_hybrid_threshold.Y2 = stepperY2.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z2)
+          tmc_hybrid_threshold.Z2 = stepperZ2.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z3)
+          tmc_hybrid_threshold.Z3 = stepperZ3.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z4)
+          tmc_hybrid_threshold.Z4 = stepperZ4.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E0)
+          tmc_hybrid_threshold.E0 = stepperE0.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E1)
+          tmc_hybrid_threshold.E1 = stepperE1.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E2)
+          tmc_hybrid_threshold.E2 = stepperE2.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E3)
+          tmc_hybrid_threshold.E3 = stepperE3.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E4)
+          tmc_hybrid_threshold.E4 = stepperE4.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E5)
+          tmc_hybrid_threshold.E5 = stepperE5.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E6)
+          tmc_hybrid_threshold.E6 = stepperE6.get_pwm_thrs();
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E7)
+          tmc_hybrid_threshold.E7 = stepperE7.get_pwm_thrs();
+        #endif
       #else
-        #define _EN_ITEM(N) , .E##N =  30
         const tmc_hybrid_threshold_t tmc_hybrid_threshold = {
-          LINEAR_AXIS_LIST(.X = 100, .Y = 100, .Z = 3, .I = 3, .J = 3, .K = 3),
-          .X2 = 100, .Y2 = 100, .Z2 = 3, .Z3 = 3, .Z4 = 3
-          REPEAT(E_STEPPERS, _EN_ITEM)
+          .X  = 100, .Y  = 100, .Z  =   3,
+          .X2 = 100, .Y2 = 100, .Z2 =   3, .Z3 =   3, .Z4 = 3,
+          .E0 =  30, .E1 =  30, .E2 =  30,
+          .E3 =  30, .E4 =  30, .E5 =  30
         };
-        #undef _EN_ITEM
       #endif
       EEPROM_WRITE(tmc_hybrid_threshold);
     }
@@ -1188,16 +1203,11 @@ void MarlinSettings::postprocess() {
     {
       tmc_sgt_t tmc_sgt{0};
       #if USE_SENSORLESS
-        LINEAR_AXIS_CODE(
-          TERN_(X_SENSORLESS, tmc_sgt.X = stepperX.homing_threshold()),
-          TERN_(Y_SENSORLESS, tmc_sgt.Y = stepperY.homing_threshold()),
-          TERN_(Z_SENSORLESS, tmc_sgt.Z = stepperZ.homing_threshold()),
-          TERN_(I_SENSORLESS, tmc_sgt.I = stepperI.homing_threshold()),
-          TERN_(J_SENSORLESS, tmc_sgt.J = stepperJ.homing_threshold()),
-          TERN_(K_SENSORLESS, tmc_sgt.K = stepperK.homing_threshold())
-        );
+        TERN_(X_SENSORLESS,  tmc_sgt.X  = stepperX.homing_threshold());
         TERN_(X2_SENSORLESS, tmc_sgt.X2 = stepperX2.homing_threshold());
+        TERN_(Y_SENSORLESS,  tmc_sgt.Y  = stepperY.homing_threshold());
         TERN_(Y2_SENSORLESS, tmc_sgt.Y2 = stepperY2.homing_threshold());
+        TERN_(Z_SENSORLESS,  tmc_sgt.Z  = stepperZ.homing_threshold());
         TERN_(Z2_SENSORLESS, tmc_sgt.Z2 = stepperZ2.homing_threshold());
         TERN_(Z3_SENSORLESS, tmc_sgt.Z3 = stepperZ3.homing_threshold());
         TERN_(Z4_SENSORLESS, tmc_sgt.Z4 = stepperZ4.homing_threshold());
@@ -1212,25 +1222,54 @@ void MarlinSettings::postprocess() {
       _FIELD_TEST(tmc_stealth_enabled);
 
       tmc_stealth_enabled_t tmc_stealth_enabled = { false };
-      TERN_(X_HAS_STEALTHCHOP,  tmc_stealth_enabled.X  = stepperX.get_stored_stealthChop());
-      TERN_(Y_HAS_STEALTHCHOP,  tmc_stealth_enabled.Y  = stepperY.get_stored_stealthChop());
-      TERN_(Z_HAS_STEALTHCHOP,  tmc_stealth_enabled.Z  = stepperZ.get_stored_stealthChop());
-      TERN_(I_HAS_STEALTHCHOP,  tmc_stealth_enabled.I  = stepperI.get_stored_stealthChop());
-      TERN_(J_HAS_STEALTHCHOP,  tmc_stealth_enabled.J  = stepperJ.get_stored_stealthChop());
-      TERN_(K_HAS_STEALTHCHOP,  tmc_stealth_enabled.K  = stepperK.get_stored_stealthChop());
-      TERN_(X2_HAS_STEALTHCHOP, tmc_stealth_enabled.X2 = stepperX2.get_stored_stealthChop());
-      TERN_(Y2_HAS_STEALTHCHOP, tmc_stealth_enabled.Y2 = stepperY2.get_stored_stealthChop());
-      TERN_(Z2_HAS_STEALTHCHOP, tmc_stealth_enabled.Z2 = stepperZ2.get_stored_stealthChop());
-      TERN_(Z3_HAS_STEALTHCHOP, tmc_stealth_enabled.Z3 = stepperZ3.get_stored_stealthChop());
-      TERN_(Z4_HAS_STEALTHCHOP, tmc_stealth_enabled.Z4 = stepperZ4.get_stored_stealthChop());
-      TERN_(E0_HAS_STEALTHCHOP, tmc_stealth_enabled.E0 = stepperE0.get_stored_stealthChop());
-      TERN_(E1_HAS_STEALTHCHOP, tmc_stealth_enabled.E1 = stepperE1.get_stored_stealthChop());
-      TERN_(E2_HAS_STEALTHCHOP, tmc_stealth_enabled.E2 = stepperE2.get_stored_stealthChop());
-      TERN_(E3_HAS_STEALTHCHOP, tmc_stealth_enabled.E3 = stepperE3.get_stored_stealthChop());
-      TERN_(E4_HAS_STEALTHCHOP, tmc_stealth_enabled.E4 = stepperE4.get_stored_stealthChop());
-      TERN_(E5_HAS_STEALTHCHOP, tmc_stealth_enabled.E5 = stepperE5.get_stored_stealthChop());
-      TERN_(E6_HAS_STEALTHCHOP, tmc_stealth_enabled.E6 = stepperE6.get_stored_stealthChop());
-      TERN_(E7_HAS_STEALTHCHOP, tmc_stealth_enabled.E7 = stepperE7.get_stored_stealthChop());
+      #if AXIS_HAS_STEALTHCHOP(X)
+        tmc_stealth_enabled.X = stepperX.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Y)
+        tmc_stealth_enabled.Y = stepperY.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Z)
+        tmc_stealth_enabled.Z = stepperZ.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(X2)
+        tmc_stealth_enabled.X2 = stepperX2.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Y2)
+        tmc_stealth_enabled.Y2 = stepperY2.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Z2)
+        tmc_stealth_enabled.Z2 = stepperZ2.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Z3)
+        tmc_stealth_enabled.Z3 = stepperZ3.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(Z4)
+        tmc_stealth_enabled.Z4 = stepperZ4.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E0)
+        tmc_stealth_enabled.E0 = stepperE0.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E1)
+        tmc_stealth_enabled.E1 = stepperE1.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E2)
+        tmc_stealth_enabled.E2 = stepperE2.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E3)
+        tmc_stealth_enabled.E3 = stepperE3.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E4)
+        tmc_stealth_enabled.E4 = stepperE4.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E5)
+        tmc_stealth_enabled.E5 = stepperE5.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E6)
+        tmc_stealth_enabled.E6 = stepperE6.get_stored_stealthChop();
+      #endif
+      #if AXIS_HAS_STEALTHCHOP(E7)
+        tmc_stealth_enabled.E7 = stepperE7.get_stored_stealthChop();
+      #endif
       EEPROM_WRITE(tmc_stealth_enabled);
     }
 
@@ -1953,15 +1992,6 @@ void MarlinSettings::postprocess() {
             #if AXIS_IS_TMC(Z4)
               SET_CURR(Z4);
             #endif
-            #if AXIS_IS_TMC(I)
-              SET_CURR(I);
-            #endif
-            #if AXIS_IS_TMC(J)
-              SET_CURR(J);
-            #endif
-            #if AXIS_IS_TMC(K)
-              SET_CURR(K);
-            #endif
             #if AXIS_IS_TMC(E0)
               SET_CURR(E0);
             #endif
@@ -1998,25 +2028,54 @@ void MarlinSettings::postprocess() {
 
         #if ENABLED(HYBRID_THRESHOLD)
           if (!validating) {
-            TERN_(X_HAS_STEALTHCHOP,  stepperX.set_pwm_thrs(tmc_hybrid_threshold.X));
-            TERN_(Y_HAS_STEALTHCHOP,  stepperY.set_pwm_thrs(tmc_hybrid_threshold.Y));
-            TERN_(Z_HAS_STEALTHCHOP,  stepperZ.set_pwm_thrs(tmc_hybrid_threshold.Z));
-            TERN_(X2_HAS_STEALTHCHOP, stepperX2.set_pwm_thrs(tmc_hybrid_threshold.X2));
-            TERN_(Y2_HAS_STEALTHCHOP, stepperY2.set_pwm_thrs(tmc_hybrid_threshold.Y2));
-            TERN_(Z2_HAS_STEALTHCHOP, stepperZ2.set_pwm_thrs(tmc_hybrid_threshold.Z2));
-            TERN_(Z3_HAS_STEALTHCHOP, stepperZ3.set_pwm_thrs(tmc_hybrid_threshold.Z3));
-            TERN_(Z4_HAS_STEALTHCHOP, stepperZ4.set_pwm_thrs(tmc_hybrid_threshold.Z4));
-            TERN_(I_HAS_STEALTHCHOP,  stepperI.set_pwm_thrs(tmc_hybrid_threshold.I));
-            TERN_(J_HAS_STEALTHCHOP,  stepperJ.set_pwm_thrs(tmc_hybrid_threshold.J));
-            TERN_(K_HAS_STEALTHCHOP,  stepperK.set_pwm_thrs(tmc_hybrid_threshold.K));
-            TERN_(E0_HAS_STEALTHCHOP, stepperE0.set_pwm_thrs(tmc_hybrid_threshold.E0));
-            TERN_(E1_HAS_STEALTHCHOP, stepperE1.set_pwm_thrs(tmc_hybrid_threshold.E1));
-            TERN_(E2_HAS_STEALTHCHOP, stepperE2.set_pwm_thrs(tmc_hybrid_threshold.E2));
-            TERN_(E3_HAS_STEALTHCHOP, stepperE3.set_pwm_thrs(tmc_hybrid_threshold.E3));
-            TERN_(E4_HAS_STEALTHCHOP, stepperE4.set_pwm_thrs(tmc_hybrid_threshold.E4));
-            TERN_(E5_HAS_STEALTHCHOP, stepperE5.set_pwm_thrs(tmc_hybrid_threshold.E5));
-            TERN_(E6_HAS_STEALTHCHOP, stepperE6.set_pwm_thrs(tmc_hybrid_threshold.E6));
-            TERN_(E7_HAS_STEALTHCHOP, stepperE7.set_pwm_thrs(tmc_hybrid_threshold.E7));
+            #if AXIS_HAS_STEALTHCHOP(X)
+              stepperX.set_pwm_thrs(tmc_hybrid_threshold.X);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Y)
+              stepperY.set_pwm_thrs(tmc_hybrid_threshold.Y);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z)
+              stepperZ.set_pwm_thrs(tmc_hybrid_threshold.Z);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(X2)
+              stepperX2.set_pwm_thrs(tmc_hybrid_threshold.X2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Y2)
+              stepperY2.set_pwm_thrs(tmc_hybrid_threshold.Y2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z2)
+              stepperZ2.set_pwm_thrs(tmc_hybrid_threshold.Z2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z3)
+              stepperZ3.set_pwm_thrs(tmc_hybrid_threshold.Z3);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z4)
+              stepperZ4.set_pwm_thrs(tmc_hybrid_threshold.Z4);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E0)
+              stepperE0.set_pwm_thrs(tmc_hybrid_threshold.E0);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E1)
+              stepperE1.set_pwm_thrs(tmc_hybrid_threshold.E1);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E2)
+              stepperE2.set_pwm_thrs(tmc_hybrid_threshold.E2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E3)
+              stepperE3.set_pwm_thrs(tmc_hybrid_threshold.E3);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E4)
+              stepperE4.set_pwm_thrs(tmc_hybrid_threshold.E4);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E5)
+              stepperE5.set_pwm_thrs(tmc_hybrid_threshold.E5);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E6)
+              stepperE6.set_pwm_thrs(tmc_hybrid_threshold.E6);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E7)
+              stepperE7.set_pwm_thrs(tmc_hybrid_threshold.E7);
+            #endif
           }
         #endif
       }
@@ -2030,16 +2089,11 @@ void MarlinSettings::postprocess() {
         EEPROM_READ(tmc_sgt);
         #if USE_SENSORLESS
           if (!validating) {
-            LINEAR_AXIS_CODE(
-              TERN_(X_SENSORLESS, stepperX.homing_threshold(tmc_sgt.X)),
-              TERN_(Y_SENSORLESS, stepperY.homing_threshold(tmc_sgt.Y)),
-              TERN_(Z_SENSORLESS, stepperZ.homing_threshold(tmc_sgt.Z)),
-              TERN_(I_SENSORLESS, stepperI.homing_threshold(tmc_sgt.I)),
-              TERN_(J_SENSORLESS, stepperJ.homing_threshold(tmc_sgt.J)),
-              TERN_(K_SENSORLESS, stepperK.homing_threshold(tmc_sgt.K))
-            );
+            TERN_(X_SENSORLESS,  stepperX.homing_threshold(tmc_sgt.X));
             TERN_(X2_SENSORLESS, stepperX2.homing_threshold(tmc_sgt.X2));
+            TERN_(Y_SENSORLESS,  stepperY.homing_threshold(tmc_sgt.Y));
             TERN_(Y2_SENSORLESS, stepperY2.homing_threshold(tmc_sgt.Y2));
+            TERN_(Z_SENSORLESS,  stepperZ.homing_threshold(tmc_sgt.Z));
             TERN_(Z2_SENSORLESS, stepperZ2.homing_threshold(tmc_sgt.Z2));
             TERN_(Z3_SENSORLESS, stepperZ3.homing_threshold(tmc_sgt.Z3));
             TERN_(Z4_SENSORLESS, stepperZ4.homing_threshold(tmc_sgt.Z4));
@@ -2058,25 +2112,54 @@ void MarlinSettings::postprocess() {
 
           #define SET_STEPPING_MODE(ST) stepper##ST.stored.stealthChop_enabled = tmc_stealth_enabled.ST; stepper##ST.refresh_stepping_mode();
           if (!validating) {
-            TERN_(X_HAS_STEALTHCHOP,  SET_STEPPING_MODE(X));
-            TERN_(Y_HAS_STEALTHCHOP,  SET_STEPPING_MODE(Y));
-            TERN_(Z_HAS_STEALTHCHOP,  SET_STEPPING_MODE(Z));
-            TERN_(I_HAS_STEALTHCHOP,  SET_STEPPING_MODE(I));
-            TERN_(J_HAS_STEALTHCHOP,  SET_STEPPING_MODE(J));
-            TERN_(K_HAS_STEALTHCHOP,  SET_STEPPING_MODE(K));
-            TERN_(X2_HAS_STEALTHCHOP, SET_STEPPING_MODE(X2));
-            TERN_(Y2_HAS_STEALTHCHOP, SET_STEPPING_MODE(Y2));
-            TERN_(Z2_HAS_STEALTHCHOP, SET_STEPPING_MODE(Z2));
-            TERN_(Z3_HAS_STEALTHCHOP, SET_STEPPING_MODE(Z3));
-            TERN_(Z4_HAS_STEALTHCHOP, SET_STEPPING_MODE(Z4));
-            TERN_(E0_HAS_STEALTHCHOP, SET_STEPPING_MODE(E0));
-            TERN_(E1_HAS_STEALTHCHOP, SET_STEPPING_MODE(E1));
-            TERN_(E2_HAS_STEALTHCHOP, SET_STEPPING_MODE(E2));
-            TERN_(E3_HAS_STEALTHCHOP, SET_STEPPING_MODE(E3));
-            TERN_(E4_HAS_STEALTHCHOP, SET_STEPPING_MODE(E4));
-            TERN_(E5_HAS_STEALTHCHOP, SET_STEPPING_MODE(E5));
-            TERN_(E6_HAS_STEALTHCHOP, SET_STEPPING_MODE(E6));
-            TERN_(E7_HAS_STEALTHCHOP, SET_STEPPING_MODE(E7));
+            #if AXIS_HAS_STEALTHCHOP(X)
+              SET_STEPPING_MODE(X);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Y)
+              SET_STEPPING_MODE(Y);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z)
+              SET_STEPPING_MODE(Z);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(X2)
+              SET_STEPPING_MODE(X2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Y2)
+              SET_STEPPING_MODE(Y2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z2)
+              SET_STEPPING_MODE(Z2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z3)
+              SET_STEPPING_MODE(Z3);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(Z4)
+              SET_STEPPING_MODE(Z4);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E0)
+              SET_STEPPING_MODE(E0);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E1)
+              SET_STEPPING_MODE(E1);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E2)
+              SET_STEPPING_MODE(E2);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E3)
+              SET_STEPPING_MODE(E3);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E4)
+              SET_STEPPING_MODE(E4);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E5)
+              SET_STEPPING_MODE(E5);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E6)
+              SET_STEPPING_MODE(E6);
+            #endif
+            #if AXIS_HAS_STEALTHCHOP(E7)
+              SET_STEPPING_MODE(E7);
+            #endif
           }
         #endif
       }
@@ -2515,25 +2598,14 @@ void MarlinSettings::reset() {
     #ifndef DEFAULT_XJERK
       #define DEFAULT_XJERK 0
     #endif
-    #if HAS_Y_AXIS && !defined(DEFAULT_YJERK)
+    #ifndef DEFAULT_YJERK
       #define DEFAULT_YJERK 0
     #endif
-    #if HAS_Z_AXIS && !defined(DEFAULT_ZJERK)
+    #ifndef DEFAULT_ZJERK
       #define DEFAULT_ZJERK 0
     #endif
-    #if LINEAR_AXES >= 4 && !defined(DEFAULT_IJERK)
-      #define DEFAULT_IJERK 0
-    #endif
-    #if LINEAR_AXES >= 5 && !defined(DEFAULT_JJERK)
-      #define DEFAULT_JJERK 0
-    #endif
-    #if LINEAR_AXES >= 6 && !defined(DEFAULT_KJERK)
-      #define DEFAULT_KJERK 0
-    #endif
-    planner.max_jerk.set(
-      LINEAR_AXIS_LIST(DEFAULT_XJERK, DEFAULT_YJERK, DEFAULT_ZJERK, DEFAULT_IJERK, DEFAULT_JJERK, DEFAULT_KJERK)
-    );
-    TERN_(HAS_CLASSIC_E_JERK, planner.max_jerk.e = DEFAULT_EJERK);
+    planner.max_jerk.set(DEFAULT_XJERK, DEFAULT_YJERK, DEFAULT_ZJERK);
+    TERN_(HAS_CLASSIC_E_JERK, planner.max_jerk.e = DEFAULT_EJERK;);
   #endif
 
   #if HAS_JUNCTION_DEVIATION
@@ -2631,11 +2703,11 @@ void MarlinSettings::reset() {
 
   #if HAS_BED_PROBE
     constexpr float dpo[] = NOZZLE_TO_PROBE_OFFSET;
-    static_assert(COUNT(dpo) == LINEAR_AXES, "NOZZLE_TO_PROBE_OFFSET must contain offsets for each linear axis X, Y, Z....");
+    static_assert(COUNT(dpo) == 3, "NOZZLE_TO_PROBE_OFFSET must contain offsets for X, Y, and Z.");
     #if HAS_PROBE_XY_OFFSET
       LOOP_LINEAR_AXES(a) probe.offset[a] = dpo[a];
     #else
-      probe.offset.set(LINEAR_AXIS_LIST(0, 0, dpo[Z_AXIS], 0, 0, 0));
+      probe.offset.set(0, 0, dpo[Z_AXIS]);
     #endif
   #endif
 
@@ -3070,15 +3142,10 @@ void MarlinSettings::reset() {
     CONFIG_ECHO_HEADING("Maximum feedrates (units/s):");
     CONFIG_ECHO_START();
     SERIAL_ECHOLNPAIR_P(
-      LIST_N(DOUBLE(LINEAR_AXES),
-        PSTR("  M203 X"), LINEAR_UNIT(planner.settings.max_feedrate_mm_s[X_AXIS]),
-        SP_Y_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[Y_AXIS]),
-        SP_Z_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[Z_AXIS]),
-        SP_I_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[I_AXIS]),
-        SP_J_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[J_AXIS]),
-        SP_K_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[K_AXIS])
-      )
-      #if HAS_EXTRUDERS && DISABLED(DISTINCT_E_FACTORS)
+        PSTR("  M203 X"), LINEAR_UNIT(planner.settings.max_feedrate_mm_s[X_AXIS])
+      , SP_Y_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[Y_AXIS])
+      , SP_Z_STR, LINEAR_UNIT(planner.settings.max_feedrate_mm_s[Z_AXIS])
+      #if DISABLED(DISTINCT_E_FACTORS)
         , SP_E_STR, VOLUMETRIC_UNIT(planner.settings.max_feedrate_mm_s[E_AXIS])
       #endif
     );
@@ -3095,15 +3162,10 @@ void MarlinSettings::reset() {
     CONFIG_ECHO_HEADING("Maximum Acceleration (units/s2):");
     CONFIG_ECHO_START();
     SERIAL_ECHOLNPAIR_P(
-      LIST_N(DOUBLE(LINEAR_AXES),
-        PSTR("  M201 X"), LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[X_AXIS]),
-        SP_Y_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[Y_AXIS]),
-        SP_Z_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[Z_AXIS]),
-        SP_I_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[I_AXIS]),
-        SP_J_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[J_AXIS]),
-        SP_K_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[K_AXIS])
-      )
-      #if HAS_EXTRUDERS && DISABLED(DISTINCT_E_FACTORS)
+        PSTR("  M201 X"), LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[X_AXIS])
+      , SP_Y_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[Y_AXIS])
+      , SP_Z_STR, LINEAR_UNIT(planner.settings.max_acceleration_mm_per_s2[Z_AXIS])
+      #if DISABLED(DISTINCT_E_FACTORS)
         , SP_E_STR, VOLUMETRIC_UNIT(planner.settings.max_acceleration_mm_per_s2[E_AXIS])
       #endif
     );
@@ -3144,14 +3206,9 @@ void MarlinSettings::reset() {
         , PSTR(" J"), LINEAR_UNIT(planner.junction_deviation_mm)
       #endif
       #if HAS_CLASSIC_JERK
-        , LIST_N(DOUBLE(LINEAR_AXES),
-          SP_X_STR, LINEAR_UNIT(planner.max_jerk.x),
-          SP_Y_STR, LINEAR_UNIT(planner.max_jerk.y),
-          SP_Z_STR, LINEAR_UNIT(planner.max_jerk.z),
-          SP_I_STR, LINEAR_UNIT(planner.max_jerk.i),
-          SP_J_STR, LINEAR_UNIT(planner.max_jerk.j),
-          SP_K_STR, LINEAR_UNIT(planner.max_jerk.k)
-        )
+        , SP_X_STR, LINEAR_UNIT(planner.max_jerk.x)
+        , SP_Y_STR, LINEAR_UNIT(planner.max_jerk.y)
+        , SP_Z_STR, LINEAR_UNIT(planner.max_jerk.z)
         #if HAS_CLASSIC_E_JERK
           , SP_E_STR, LINEAR_UNIT(planner.max_jerk.e)
         #endif
@@ -3163,17 +3220,13 @@ void MarlinSettings::reset() {
       CONFIG_ECHO_START();
       SERIAL_ECHOLNPAIR_P(
         #if IS_CARTESIAN
-          LIST_N(DOUBLE(LINEAR_AXES),
-            PSTR("  M206 X"), LINEAR_UNIT(home_offset.x),
-            SP_Y_STR, LINEAR_UNIT(home_offset.y),
-            SP_Z_STR, LINEAR_UNIT(home_offset.z),
-            SP_I_STR, LINEAR_UNIT(home_offset.i),
-            SP_J_STR, LINEAR_UNIT(home_offset.j),
-            SP_K_STR, LINEAR_UNIT(home_offset.k)
-          )
+            PSTR("  M206 X"), LINEAR_UNIT(home_offset.x)
+          , SP_Y_STR, LINEAR_UNIT(home_offset.y)
+          , SP_Z_STR
         #else
-          PSTR("  M206 Z"), LINEAR_UNIT(home_offset.z)
+          PSTR("  M206 Z")
         #endif
+        , LINEAR_UNIT(home_offset.z)
       );
     #endif
 
@@ -3525,19 +3578,6 @@ void MarlinSettings::reset() {
         SERIAL_ECHOLNPAIR(" I3 Z", stepperZ4.getMilliamps());
       #endif
 
-      #if AXIS_IS_TMC(I)
-        say_M906(forReplay);
-        SERIAL_ECHOLNPAIR_P(SP_I_STR, stepperI.getMilliamps());
-      #endif
-      #if AXIS_IS_TMC(J)
-        say_M906(forReplay);
-        SERIAL_ECHOLNPAIR_P(SP_J_STR, stepperJ.getMilliamps());
-      #endif
-      #if AXIS_IS_TMC(K)
-        say_M906(forReplay);
-        SERIAL_ECHOLNPAIR_P(SP_K_STR, stepperK.getMilliamps());
-      #endif
-
       #if AXIS_IS_TMC(E0)
         say_M906(forReplay);
         SERIAL_ECHOLNPAIR(" T0 E", stepperE0.getMilliamps());
@@ -3577,87 +3617,74 @@ void MarlinSettings::reset() {
        */
       #if ENABLED(HYBRID_THRESHOLD)
         CONFIG_ECHO_HEADING("Hybrid Threshold:");
-        #if X_HAS_STEALTHCHOP || Y_HAS_STEALTHCHOP || Z_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(X) || AXIS_HAS_STEALTHCHOP(Y) || AXIS_HAS_STEALTHCHOP(Z)
           say_M913(forReplay);
-          #if X_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(X)
             SERIAL_ECHOPAIR_P(SP_X_STR, stepperX.get_pwm_thrs());
           #endif
-          #if Y_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(Y)
             SERIAL_ECHOPAIR_P(SP_Y_STR, stepperY.get_pwm_thrs());
           #endif
-          #if Z_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(Z)
             SERIAL_ECHOPAIR_P(SP_Z_STR, stepperZ.get_pwm_thrs());
           #endif
           SERIAL_EOL();
         #endif
 
-        #if X2_HAS_STEALTHCHOP || Y2_HAS_STEALTHCHOP || Z2_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(X2) || AXIS_HAS_STEALTHCHOP(Y2) || AXIS_HAS_STEALTHCHOP(Z2)
           say_M913(forReplay);
           SERIAL_ECHOPGM(" I1");
-          #if X2_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(X2)
             SERIAL_ECHOPAIR_P(SP_X_STR, stepperX2.get_pwm_thrs());
           #endif
-          #if Y2_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(Y2)
             SERIAL_ECHOPAIR_P(SP_Y_STR, stepperY2.get_pwm_thrs());
           #endif
-          #if Z2_HAS_STEALTHCHOP
+          #if AXIS_HAS_STEALTHCHOP(Z2)
             SERIAL_ECHOPAIR_P(SP_Z_STR, stepperZ2.get_pwm_thrs());
           #endif
           SERIAL_EOL();
         #endif
 
-        #if Z3_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(Z3)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" I2 Z", stepperZ3.get_pwm_thrs());
         #endif
 
-        #if Z4_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(Z4)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" I3 Z", stepperZ4.get_pwm_thrs());
         #endif
 
-        #if I_HAS_STEALTHCHOP
-          say_M913(forReplay);
-          SERIAL_ECHOLNPAIR_P(SP_I_STR, stepperI.get_pwm_thrs());
-        #endif
-        #if J_HAS_STEALTHCHOP
-          say_M913(forReplay);
-          SERIAL_ECHOLNPAIR_P(SP_J_STR, stepperJ.get_pwm_thrs());
-        #endif
-        #if K_HAS_STEALTHCHOP
-          say_M913(forReplay);
-          SERIAL_ECHOLNPAIR_P(SP_K_STR, stepperK.get_pwm_thrs());
-        #endif
-
-        #if E0_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E0)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T0 E", stepperE0.get_pwm_thrs());
         #endif
-        #if E1_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E1)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T1 E", stepperE1.get_pwm_thrs());
         #endif
-        #if E2_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E2)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T2 E", stepperE2.get_pwm_thrs());
         #endif
-        #if E3_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E3)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T3 E", stepperE3.get_pwm_thrs());
         #endif
-        #if E4_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E4)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T4 E", stepperE4.get_pwm_thrs());
         #endif
-        #if E5_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E5)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T5 E", stepperE5.get_pwm_thrs());
         #endif
-        #if E6_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E6)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T6 E", stepperE6.get_pwm_thrs());
         #endif
-        #if E7_HAS_STEALTHCHOP
+        #if AXIS_HAS_STEALTHCHOP(E7)
           say_M913(forReplay);
           SERIAL_ECHOLNPAIR(" T7 E", stepperE7.get_pwm_thrs());
         #endif
@@ -3712,22 +3739,6 @@ void MarlinSettings::reset() {
           SERIAL_ECHOLNPAIR(" I3 Z", stepperZ4.homing_threshold());
         #endif
 
-        #if I_SENSORLESS
-          CONFIG_ECHO_START();
-          say_M914();
-          SERIAL_ECHOLNPAIR_P(SP_I_STR, stepperI.homing_threshold());
-        #endif
-        #if J_SENSORLESS
-          CONFIG_ECHO_START();
-          say_M914();
-          SERIAL_ECHOLNPAIR_P(SP_J_STR, stepperJ.homing_threshold());
-        #endif
-        #if K_SENSORLESS
-          CONFIG_ECHO_START();
-          say_M914();
-          SERIAL_ECHOLNPAIR_P(SP_K_STR, stepperK.homing_threshold());
-        #endif
-
       #endif // USE_SENSORLESS
 
       /**
@@ -3735,29 +3746,45 @@ void MarlinSettings::reset() {
        */
       #if HAS_STEALTHCHOP
         CONFIG_ECHO_HEADING("Driver stepping mode:");
-        const bool chop_x = TERN0(X_HAS_STEALTHCHOP, stepperX.get_stored_stealthChop()),
-                   chop_y = TERN0(Y_HAS_STEALTHCHOP, stepperY.get_stored_stealthChop()),
-                   chop_z = TERN0(Z_HAS_STEALTHCHOP, stepperZ.get_stored_stealthChop()),
-                   chop_i = TERN0(I_HAS_STEALTHCHOP, stepperI.get_stored_stealthChop()),
-                   chop_j = TERN0(J_HAS_STEALTHCHOP, stepperJ.get_stored_stealthChop()),
-                   chop_k = TERN0(K_HAS_STEALTHCHOP, stepperK.get_stored_stealthChop());
+        #if AXIS_HAS_STEALTHCHOP(X)
+          const bool chop_x = stepperX.get_stored_stealthChop();
+        #else
+          constexpr bool chop_x = false;
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Y)
+          const bool chop_y = stepperY.get_stored_stealthChop();
+        #else
+          constexpr bool chop_y = false;
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z)
+          const bool chop_z = stepperZ.get_stored_stealthChop();
+        #else
+          constexpr bool chop_z = false;
+        #endif
 
-        if (chop_x || chop_y || chop_z || chop_i || chop_j || chop_k) {
+        if (chop_x || chop_y || chop_z) {
           say_M569(forReplay);
-          LINEAR_AXIS_CODE(
-            if (chop_x) SERIAL_ECHOPGM_P(SP_X_STR),
-            if (chop_y) SERIAL_ECHOPGM_P(SP_Y_STR),
-            if (chop_z) SERIAL_ECHOPGM_P(SP_Z_STR),
-            if (chop_i) SERIAL_ECHOPGM_P(SP_I_STR),
-            if (chop_j) SERIAL_ECHOPGM_P(SP_J_STR),
-            if (chop_k) SERIAL_ECHOPGM_P(SP_K_STR)
-          );
+          if (chop_x) SERIAL_ECHOPGM_P(SP_X_STR);
+          if (chop_y) SERIAL_ECHOPGM_P(SP_Y_STR);
+          if (chop_z) SERIAL_ECHOPGM_P(SP_Z_STR);
           SERIAL_EOL();
         }
 
-        const bool chop_x2 = TERN0(X2_HAS_STEALTHCHOP, stepperX2.get_stored_stealthChop()),
-                   chop_y2 = TERN0(Y2_HAS_STEALTHCHOP, stepperY2.get_stored_stealthChop()),
-                   chop_z2 = TERN0(Z2_HAS_STEALTHCHOP, stepperZ2.get_stored_stealthChop());
+        #if AXIS_HAS_STEALTHCHOP(X2)
+          const bool chop_x2 = stepperX2.get_stored_stealthChop();
+        #else
+          constexpr bool chop_x2 = false;
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Y2)
+          const bool chop_y2 = stepperY2.get_stored_stealthChop();
+        #else
+          constexpr bool chop_y2 = false;
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(Z2)
+          const bool chop_z2 = stepperZ2.get_stored_stealthChop();
+        #else
+          constexpr bool chop_z2 = false;
+        #endif
 
         if (chop_x2 || chop_y2 || chop_z2) {
           say_M569(forReplay, PSTR("I1"));
@@ -3767,21 +3794,38 @@ void MarlinSettings::reset() {
           SERIAL_EOL();
         }
 
-        if (TERN0(Z3_HAS_STEALTHCHOP, stepperZ3.get_stored_stealthChop())) { say_M569(forReplay, PSTR("I2 Z"), true); }
-        if (TERN0(Z4_HAS_STEALTHCHOP, stepperZ4.get_stored_stealthChop())) { say_M569(forReplay, PSTR("I3 Z"), true); }
+        #if AXIS_HAS_STEALTHCHOP(Z3)
+          if (stepperZ3.get_stored_stealthChop()) { say_M569(forReplay, PSTR("I2 Z"), true); }
+        #endif
 
-        if (TERN0( I_HAS_STEALTHCHOP, stepperI.get_stored_stealthChop()))  { say_M569(forReplay, SP_I_STR, true); }
-        if (TERN0( J_HAS_STEALTHCHOP, stepperJ.get_stored_stealthChop()))  { say_M569(forReplay, SP_J_STR, true); }
-        if (TERN0( K_HAS_STEALTHCHOP, stepperK.get_stored_stealthChop()))  { say_M569(forReplay, SP_K_STR, true); }
+        #if AXIS_HAS_STEALTHCHOP(Z4)
+          if (stepperZ4.get_stored_stealthChop()) { say_M569(forReplay, PSTR("I3 Z"), true); }
+        #endif
 
-        if (TERN0(E0_HAS_STEALTHCHOP, stepperE0.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T0 E"), true); }
-        if (TERN0(E1_HAS_STEALTHCHOP, stepperE1.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T1 E"), true); }
-        if (TERN0(E2_HAS_STEALTHCHOP, stepperE2.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T2 E"), true); }
-        if (TERN0(E3_HAS_STEALTHCHOP, stepperE3.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T3 E"), true); }
-        if (TERN0(E4_HAS_STEALTHCHOP, stepperE4.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T4 E"), true); }
-        if (TERN0(E5_HAS_STEALTHCHOP, stepperE5.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T5 E"), true); }
-        if (TERN0(E6_HAS_STEALTHCHOP, stepperE6.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T6 E"), true); }
-        if (TERN0(E7_HAS_STEALTHCHOP, stepperE7.get_stored_stealthChop())) { say_M569(forReplay, PSTR("T7 E"), true); }
+        #if AXIS_HAS_STEALTHCHOP(E0)
+          if (stepperE0.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T0 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E1)
+          if (stepperE1.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T1 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E2)
+          if (stepperE2.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T2 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E3)
+          if (stepperE3.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T3 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E4)
+          if (stepperE4.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T4 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E5)
+          if (stepperE5.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T5 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E6)
+          if (stepperE6.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T6 E"), true); }
+        #endif
+        #if AXIS_HAS_STEALTHCHOP(E7)
+          if (stepperE7.get_stored_stealthChop()) { say_M569(forReplay, PSTR("T7 E"), true); }
+        #endif
 
       #endif // HAS_STEALTHCHOP
 
@@ -3811,7 +3855,7 @@ void MarlinSettings::reset() {
         );
       #elif HAS_MOTOR_CURRENT_SPI
         SERIAL_ECHOPGM("  M907");                              // SPI-based has 5 values:
-        LOOP_LOGICAL_AXES(q) {                                 // X Y Z (I J K) E (map to X Y Z (I J K) E0 by default)
+        LOOP_LOGICAL_AXES(q) {                                 // X Y Z E (map to X Y Z E0 by default)
           SERIAL_CHAR(' ', axis_codes[q]);
           SERIAL_ECHO(stepper.motor_current_setting[q]);
         }
@@ -3821,7 +3865,7 @@ void MarlinSettings::reset() {
     #elif ENABLED(HAS_MOTOR_CURRENT_I2C)                       // i2c-based has any number of values
       // Values sent over i2c are not stored.
       // Indexes map directly to drivers, not axes.
-    #elif ENABLED(HAS_MOTOR_CURRENT_DAC)                       // DAC-based has 4 values, for X Y Z (I J K) E
+    #elif ENABLED(HAS_MOTOR_CURRENT_DAC)                       // DAC-based has 4 values, for X Y Z E
       // Values sent over i2c are not stored. Uses indirect mapping.
     #endif
 
@@ -3850,14 +3894,9 @@ void MarlinSettings::reset() {
       CONFIG_ECHO_START();
       SERIAL_ECHOLNPAIR_P(
           PSTR("  M425 F"), backlash.get_correction()
-        , LIST_N(DOUBLE(LINEAR_AXES),
-            SP_X_STR, LINEAR_UNIT(backlash.distance_mm.x),
-            SP_Y_STR, LINEAR_UNIT(backlash.distance_mm.y),
-            SP_Z_STR, LINEAR_UNIT(backlash.distance_mm.z),
-            SP_I_STR, LINEAR_UNIT(backlash.distance_mm.i),
-            SP_J_STR, LINEAR_UNIT(backlash.distance_mm.j),
-            SP_K_STR, LINEAR_UNIT(backlash.distance_mm.k)
-          )
+        , SP_X_STR, LINEAR_UNIT(backlash.distance_mm.x)
+        , SP_Y_STR, LINEAR_UNIT(backlash.distance_mm.y)
+        , SP_Z_STR, LINEAR_UNIT(backlash.distance_mm.z)
         #ifdef BACKLASH_SMOOTHING_MM
           , PSTR(" S"), LINEAR_UNIT(backlash.smoothing_mm)
         #endif
