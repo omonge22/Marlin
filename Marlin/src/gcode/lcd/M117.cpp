@@ -20,12 +20,8 @@
  *
  */
 
-#include "../../inc/MarlinConfig.h"
-
-#if HAS_STATUS_MESSAGE
-
 #include "../gcode.h"
-#include "../../lcd/marlinui.h"
+#include "../../lcd/ultralcd.h"
 
 /**
  * M117: Set LCD Status Message
@@ -38,5 +34,3 @@ void GcodeSuite::M117() {
     ui.reset_status();
 
 }
-
-#endif // HAS_STATUS_MESSAGE
