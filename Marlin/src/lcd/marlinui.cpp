@@ -165,9 +165,8 @@ constexpr uint8_t epps = ENCODER_PULSES_PER_STEP;
   #endif
 #endif
 
-#if SCREENS_CAN_TIME_OUT
+#if HAS_LCD_MENU && LCD_TIMEOUT_TO_STATUS > 0
   bool MarlinUI::defer_return_to_status;
-  millis_t MarlinUI::return_to_status_ms = 0;
 #endif
 
 uint8_t MarlinUI::lcd_status_update_delay = 1; // First update one loop delayed
@@ -816,6 +815,9 @@ void MarlinUI::quick_feedback(const bool clear_buttons/*=true*/) {
 
 LCDViewAction MarlinUI::lcdDrawUpdate = LCDVIEW_CLEAR_CALL_REDRAW;
 millis_t next_lcd_update_ms;
+#if HAS_LCD_MENU && LCD_TIMEOUT_TO_STATUS
+  millis_t MarlinUI::return_to_status_ms = 0;
+#endif
 
 inline bool can_encode() {
   return !BUTTON_PRESSED(ENC_EN); // Update encoder only when ENC_EN is not LOW (pressed)
@@ -825,6 +827,12 @@ void MarlinUI::update() {
 
   static uint16_t max_display_update_time = 0;
   millis_t ms = millis();
+
+  #if HAS_LCD_MENU && LCD_TIMEOUT_TO_STATUS > 0
+    #define RESET_STATUS_TIMEOUT() (return_to_status_ms = ms + LCD_TIMEOUT_TO_STATUS)
+  #else
+    #define RESET_STATUS_TIMEOUT() NOOP
+  #endif
 
   #ifdef LED_BACKLIGHT_TIMEOUT
     leds.update_timeout(powersupply_on);
@@ -851,7 +859,7 @@ void MarlinUI::update() {
 
     #if HAS_TOUCH_BUTTONS
       if (touch_buttons) {
-        reset_status_timeout(ms);
+        RESET_STATUS_TIMEOUT();
         if (touch_buttons & (EN_A | EN_B)) {              // Menu arrows, in priority
           if (ELAPSED(ms, next_button_update_ms)) {
             encoderDiff = (ENCODER_STEPS_PER_MENU_ITEM) * epps * encoderDirection;
@@ -906,7 +914,7 @@ void MarlinUI::update() {
       TERN_(HAS_SLOW_BUTTONS, slow_buttons = read_slow_buttons()); // Buttons that take too long to read in interrupt context
 
       if (TERN0(IS_RRW_KEYPAD, handle_keypad()))
-        reset_status_timeout(ms);
+        RESET_STATUS_TIMEOUT();
 
       uint8_t abs_diff = ABS(encoderDiff);
 
@@ -972,7 +980,7 @@ void MarlinUI::update() {
           encoderDiff = 0;
         }
 
-        reset_status_timeout(ms);
+        RESET_STATUS_TIMEOUT();
 
         refresh(LCDVIEW_REDRAW_NOW);
 
@@ -998,7 +1006,7 @@ void MarlinUI::update() {
         lcd_status_update_delay = ++filename_scroll_pos >= filename_scroll_max ? 12 : 4; // Long delay at end and start
         if (filename_scroll_pos > filename_scroll_max) filename_scroll_pos = 0;
         refresh(LCDVIEW_REDRAW_NOW);
-        reset_status_timeout(ms);
+        RESET_STATUS_TIMEOUT();
       }
     #endif
 
@@ -1067,10 +1075,10 @@ void MarlinUI::update() {
         NOLESS(max_display_update_time, millis() - ms);
     }
 
-    #if SCREENS_CAN_TIME_OUT
+    #if HAS_LCD_MENU && LCD_TIMEOUT_TO_STATUS > 0
       // Return to Status Screen after a timeout
       if (on_status_screen() || defer_return_to_status)
-        reset_status_timeout(ms);
+        RESET_STATUS_TIMEOUT();
       else if (ELAPSED(ms, return_to_status_ms))
         return_to_status();
     #endif
@@ -1601,9 +1609,8 @@ void MarlinUI::update() {
 
     if (status) {
       if (old_status < 2) {
-        #if ENABLED(EXTENSIBLE_UI)
-          ExtUI::onMediaInserted();
-        #elif ENABLED(BROWSE_MEDIA_ON_INSERT)
+        TERN_(EXTENSIBLE_UI, ExtUI::onMediaInserted()); // ExtUI response
+        #if ENABLED(BROWSE_MEDIA_ON_INSERT)
           clear_menu_history();
           quick_feedback();
           goto_screen(MEDIA_MENU_GATEWAY);
@@ -1614,9 +1621,8 @@ void MarlinUI::update() {
     }
     else {
       if (old_status < 2) {
-        #if ENABLED(EXTENSIBLE_UI)
-          ExtUI::onMediaRemoved();
-        #elif PIN_EXISTS(SD_DETECT)
+        TERN_(EXTENSIBLE_UI, ExtUI::onMediaRemoved()); // ExtUI response
+        #if PIN_EXISTS(SD_DETECT)
           LCD_MESSAGEPGM(MSG_MEDIA_REMOVED);
           #if HAS_LCD_MENU
             if (!defer_return_to_status) return_to_status();

@@ -216,12 +216,10 @@ void GcodeSuite::M114() {
       report_current_position_detail();
       return;
     }
-    #if HAS_EXTRUDERS
-      if (parser.seen_test('E')) {
-        SERIAL_ECHOLNPAIR("Count E:", stepper.position(E_AXIS));
-        return;
-      }
-    #endif
+    if (parser.seen_test('E')) {
+      SERIAL_ECHOLNPAIR("Count E:", stepper.position(E_AXIS));
+      return;
+    }
   #endif
 
   #if ENABLED(M114_REALTIME)

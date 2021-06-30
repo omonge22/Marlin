@@ -266,18 +266,7 @@ void report_current_position_projected() {
 
     get_cartesian_from_steppers();
     const xyz_pos_t lpos = cartes.asLogical();
-    SERIAL_ECHOPAIR(
-      "X:", lpos.x
-      #if HAS_Y_AXIS
-        , " Y:", lpos.y
-      #endif
-      #if HAS_Z_AXIS
-        , " Z:", lpos.z
-      #endif
-      #if HAS_EXTRUDERS
-        , " E:", current_position.e
-      #endif
-    );
+    SERIAL_ECHOPAIR("X:", lpos.x, " Y:", lpos.y, " Z:", lpos.z, " E:", current_position.e);
 
     stepper.report_positions();
     #if IS_SCARA
@@ -940,7 +929,7 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
     float cartesian_mm = diff.magnitude();
 
     // If the move is very short, check the E move distance
-    TERN_(HAS_EXTRUDERS, if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e));
+    if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e);
 
     // No E move either? Game over.
     if (UNEAR_ZERO(cartesian_mm)) return true;
@@ -1019,7 +1008,7 @@ FORCE_INLINE void segment_idle(millis_t &next_idle_ms) {
       // If the move is very short, check the E move distance
       // No E move either? Game over.
       float cartesian_mm = diff.magnitude();
-      TERN_(HAS_EXTRUDERS, if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e));
+      if (UNEAR_ZERO(cartesian_mm)) cartesian_mm = ABS(diff.e);
       if (UNEAR_ZERO(cartesian_mm)) return;
 
       // The length divided by the segment size
